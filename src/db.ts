@@ -1,100 +1,136 @@
-import Dexie, { type Table } from 'dexie';
+import {
+  collection,
+  getDocs,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  doc,
+  query,
+  orderBy,
+  writeBatch,
+  getDoc,
+} from 'firebase/firestore';
+import { db } from './firebase'; // Import the initialized Firestore instance
 
 // --- Interfaces (can be reused) ---
 export interface Material {
-  id?: number; // Optional for auto-increment
+  id: string; // Firestore uses strings for IDs
   nombre: string;
   precio: number;
 }
 
 export interface Presupuesto {
-  id?: number;
+  id: string; // Firestore uses strings for IDs
   nombre: string;
   fecha: string;
 }
 
 export interface PresupuestoMaterial {
-  id?: number;
-  presupuesto_id: number;
-  material_id: number;
+  id: string; // Firestore uses strings for IDs
+  presupuesto_id: string;
+  material_id: string;
   cantidad: number;
+  // We can also store material details here to avoid extra reads
+  nombreMaterial?: string;
+  precioMaterial?: number;
 }
 
-// --- Dexie Database Class ---
-export class MySubClassedDexie extends Dexie {
-  materiales!: Table<Material>;
-  presupuestos!: Table<Presupuesto>;
-  presupuesto_materiales!: Table<PresupuestoMaterial>;
+// --- Collections ---
+const materialesCollection = collection(db, 'materiales');
+const presupuestosCollection = collection(db, 'presupuestos');
 
-  constructor() {
-    super('presupuestosDB');
-    this.version(1).stores({
-      materiales: '++id, nombre',
-      presupuestos: '++id, fecha',
-      presupuesto_materiales: '++id, presupuesto_id, material_id',
-    });
-  }
-}
-
-export const db = new MySubClassedDexie();
-
-// --- Wrapper Functions (to mimic the old API) ---
+// --- Wrapper Functions ---
 
 export const getMateriales = async (): Promise<Material[]> => {
-  return db.materiales.toArray();
+  const snapshot = await getDocs(materialesCollection);
+  return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Material));
 };
 
 export const addMaterial = async (nombre: string, precio: number) => {
-  return db.materiales.add({ nombre, precio });
+  return addDoc(materialesCollection, { nombre, precio });
 };
 
-export const updateMaterial = async (id: number, nombre: string, precio: number) => {
-  return db.materiales.update(id, { nombre, precio });
+export const updateMaterial = async (id: string, nombre: string, precio: number) => {
+  const materialDoc = doc(db, 'materiales', id);
+  return updateDoc(materialDoc, { nombre, precio });
 };
 
-export const deleteMaterial = async (id: number) => {
-  await db.presupuesto_materiales.where('material_id').equals(id).delete();
-  return db.materiales.delete(id);
+export const deleteMaterial = async (id: string) => {
+  // Note: This only deletes the material. It does not remove it from existing
+  // presupuestos. A more robust solution would be to use a cloud function
+  // to handle cascading deletes.
+  const materialDoc = doc(db, 'materiales', id);
+  return deleteDoc(materialDoc);
 };
 
 export const getPresupuestos = async (): Promise<Presupuesto[]> => {
-  return db.presupuestos.orderBy('fecha').reverse().toArray();
+  const q = query(presupuestosCollection, orderBy('fecha', 'desc'));
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Presupuesto));
 };
 
-export const addPresupuesto = async (nombre: string): Promise<number | undefined> => {
+export const addPresupuesto = async (nombre: string): Promise<string> => {
   const fecha = new Date().toISOString();
-  return db.presupuestos.add({ nombre, fecha });
+  const newPresupuesto = await addDoc(presupuestosCollection, { nombre, fecha });
+  return newPresupuesto.id;
 };
 
-export const deletePresupuesto = async (presupuesto_id: number) => {
-  await db.presupuesto_materiales.where('presupuesto_id').equals(presupuesto_id).delete();
-  return db.presupuestos.delete(presupuesto_id);
+export const deletePresupuesto = async (presupuesto_id: string) => {
+  const presupuestoDoc = doc(db, 'presupuestos', presupuesto_id);
+  const presupuestoMaterialesCollection = collection(presupuestoDoc, 'materiales');
+
+  // Delete all materials in the subcollection first
+  const snapshot = await getDocs(presupuestoMaterialesCollection);
+  const batch = writeBatch(db);
+  snapshot.docs.forEach(doc => {
+    batch.delete(doc.ref);
+  });
+  await batch.commit();
+
+  // Then delete the presupuesto itself
+  return deleteDoc(presupuestoDoc);
 };
 
-export const addMaterialToPresupuesto = async (presupuesto_id: number, material_id: number, cantidad: number) => {
-  return db.presupuesto_materiales.add({ presupuesto_id, material_id, cantidad });
+export const addMaterialToPresupuesto = async (presupuesto_id: string, material_id: string, cantidad: number) => {
+  const materialDoc = await getDoc(doc(db, 'materiales', material_id));
+  if (!materialDoc.exists()) {
+    throw new Error("Material not found");
+  }
+  const materialData = materialDoc.data();
+
+  const presupuestoMaterialesCollection = collection(db, 'presupuestos', presupuesto_id, 'materiales');
+  return addDoc(presupuestoMaterialesCollection, {
+    material_id,
+    cantidad,
+    // Denormalize for easier display
+    nombreMaterial: materialData.nombre,
+    precioMaterial: materialData.precio
+  });
 };
 
-export const getMaterialesForPresupuesto = async (presupuesto_id: number): Promise<(Material & { cantidad: number; presupuesto_material_id: number })[]> => {
-    const presupuestoMateriales = await db.presupuesto_materiales.where('presupuesto_id').equals(presupuesto_id).toArray();
-    const materialIds = presupuestoMateriales.map(pm => pm.material_id);
-    const materiales = await db.materiales.bulkGet(materialIds);
+export const getMaterialesForPresupuesto = async (presupuesto_id: string): Promise<(Omit<PresupuestoMaterial, 'presupuesto_id'>)[]> => {
+    const presupuestoMaterialesCollection = collection(db, 'presupuestos', presupuesto_id, 'materiales');
+    const snapshot = await getDocs(presupuestoMaterialesCollection);
 
-    return presupuestoMateriales.map(pm => {
-        const material = materiales.find(m => m?.id === pm.material_id);
-        if (!material) return null;
+    return snapshot.docs.map(doc => {
+        const data = doc.data();
         return {
-            ...material,
-            cantidad: pm.cantidad,
-            presupuesto_material_id: pm.id!,
-        };
-    }).filter(Boolean) as (Material & { cantidad: number; presupuesto_material_id: number })[];
+            id: doc.id,
+            material_id: data.material_id,
+            cantidad: data.cantidad,
+            nombreMaterial: data.nombreMaterial,
+            precioMaterial: data.precioMaterial
+        } as Omit<PresupuestoMaterial, 'presupuesto_id'>;
+    });
 };
 
-export const deleteMaterialFromPresupuesto = async (presupuesto_material_id: number) => {
-  return db.presupuesto_materiales.delete(presupuesto_material_id);
+
+export const deleteMaterialFromPresupuesto = async (presupuesto_id: string, presupuesto_material_id: string) => {
+  const materialDoc = doc(db, 'presupuestos', presupuesto_id, 'materiales', presupuesto_material_id);
+  return deleteDoc(materialDoc);
 };
 
-export const updateMaterialQuantityInPresupuesto = async (presupuesto_material_id: number, cantidad: number) => {
-  return db.presupuesto_materiales.update(presupuesto_material_id, { cantidad });
+export const updateMaterialQuantityInPresupuesto = async (presupuesto_id: string, presupuesto_material_id: string, cantidad: number) => {
+  const materialDoc = doc(db, 'presupuestos', presupuesto_id, 'materiales', presupuesto_material_id);
+  return updateDoc(materialDoc, { cantidad });
 };

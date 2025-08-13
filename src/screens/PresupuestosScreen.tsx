@@ -28,7 +28,7 @@ const PresupuestosScreen = () => {
   const [nombreError, setNombreError] = useState(false);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string }>({ open: false, message: '' });
   const [openConfirmDialog, setOpenConfirmDialog] = useState(false);
-  const [presupuestoToDelete, setPresupuestoToDelete] = useState<number | null>(null);
+  const [presupuestoToDelete, setPresupuestoToDelete] = useState<string | null>(null);
   const navigate = useNavigate();
 
   const loadData = useCallback(async () => {
@@ -69,7 +69,7 @@ const PresupuestosScreen = () => {
     }
   };
 
-  const handleDeletePresupuesto = (id: number) => {
+  const handleDeletePresupuesto = (id: string) => {
     setPresupuestoToDelete(id);
     setOpenConfirmDialog(true);
   };
@@ -95,7 +95,7 @@ const PresupuestosScreen = () => {
     setPresupuestoToDelete(null);
   };
 
-  const handleNavigateToDetail = (id: number) => {
+  const handleNavigateToDetail = (id: string) => {
     navigate(`/presupuesto/${id}`);
   };
 
@@ -115,12 +115,12 @@ const PresupuestosScreen = () => {
               key={p.id}
               disablePadding
               secondaryAction={
-                <IconButton edge="end" aria-label="delete" onClick={() => handleDeletePresupuesto(p.id!)}>
+                <IconButton edge="end" aria-label="delete" onClick={() => handleDeletePresupuesto(p.id)}>
                   <DeleteIcon />
                 </IconButton>
               }
             >
-              <ListItemButton onClick={() => handleNavigateToDetail(p.id!)}>
+              <ListItemButton onClick={() => handleNavigateToDetail(p.id)}>
                 <ListItemText
                   primary={p.nombre}
                   secondary={new Date(p.fecha).toLocaleDateString()}

@@ -34,22 +34,25 @@ import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 
-interface MaterialEnPresupuesto extends Material {
+interface MaterialEnPresupuestoDisplay {
+  id: string; // This is the ID of the presupuesto_material document
+  material_id: string;
   cantidad: number;
-  presupuesto_material_id: number;
+  nombreMaterial?: string;
+  precioMaterial?: number;
 }
 
 const DetallePresupuestoScreen = () => {
   const { id } = useParams<{ id: string }>();
-  const presupuestoId = parseInt(id || '0', 10);
+  const presupuestoId = id; // No parseInt needed, it's already a string
 
-  const [materialesDelPresupuesto, setMaterialesDelPresupuesto] = useState<MaterialEnPresupuesto[]>([]);
+  const [materialesDelPresupuesto, setMaterialesDelPresupuesto] = useState<MaterialEnPresupuestoDisplay[]>([]);
   const [todosLosMateriales, setTodosLosMateriales] = useState<Material[]>([]);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [selectedMaterialId, setSelectedMaterialId] = useState<number | ''>('');
+  const [selectedMaterialId, setSelectedMaterialId] = useState<string | ''>(null);
   const [cantidad, setCantidad] = useState('');
-  const [materialToEdit, setMaterialToEdit] = useState<MaterialEnPresupuesto | null>(null);
+  const [materialToEdit, setMaterialToEdit] = useState<MaterialEnPresupuestoDisplay | null>(null);
   const [total, setTotal] = useState(0);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string }>({ open: false, message: '' });
 
@@ -60,7 +63,7 @@ const DetallePresupuestoScreen = () => {
       const allMaterials = await getMateriales();
       setMaterialesDelPresupuesto(data);
       setTodosLosMateriales(allMaterials);
-      const newTotal = data.reduce((acc, item) => acc + (item.precio * item.cantidad), 0);
+      const newTotal = data.reduce((acc, item) => acc + ((item.precioMaterial ?? 0) * item.cantidad), 0); // Use precioMaterial
       setTotal(newTotal);
     } catch (error) {
       console.error(error);
@@ -77,7 +80,7 @@ const DetallePresupuestoScreen = () => {
   const handleAddDialogClose = () => setAddDialogOpen(false);
 
   // Edit Dialog
-  const handleEditDialogOpen = (item: MaterialEnPresupuesto) => {
+  const handleEditDialogOpen = (item: MaterialEnPresupuestoDisplay) => {
     setMaterialToEdit(item);
     setCantidad(item.cantidad.toString());
     setEditDialogOpen(true);
@@ -85,9 +88,9 @@ const DetallePresupuestoScreen = () => {
   const handleEditDialogClose = () => setEditDialogOpen(false);
 
   const handleAddMaterial = async () => {
-    if (selectedMaterialId && cantidad) {
+    if (selectedMaterialId && cantidad && presupuestoId) { // Added presupuestoId check
       try {
-        await addMaterialToPresupuesto(presupuestoId, selectedMaterialId as number, parseFloat(cantidad));
+        await addMaterialToPresupuesto(presupuestoId, selectedMaterialId, parseFloat(cantidad)); // Pass string IDs
         loadData();
         handleAddDialogClose();
         setSnackbar({ open: true, message: 'Material añadido.' });
@@ -99,9 +102,9 @@ const DetallePresupuestoScreen = () => {
   };
 
   const handleUpdateQuantity = async () => {
-    if (materialToEdit && cantidad) {
+    if (materialToEdit && cantidad && presupuestoId) { // Added presupuestoId check
       try {
-        await updateMaterialQuantityInPresupuesto(materialToEdit.presupuesto_material_id, parseFloat(cantidad));
+        await updateMaterialQuantityInPresupuesto(presupuestoId, materialToEdit.id, parseFloat(cantidad)); // Pass string IDs
         loadData();
         handleEditDialogClose();
         setSnackbar({ open: true, message: 'Cantidad actualizada.' });
@@ -112,9 +115,10 @@ const DetallePresupuestoScreen = () => {
     }
   };
 
-  const handleDelete = async (presupuesto_material_id: number) => {
+  const handleDelete = async (presupuesto_material_id: string) => { // Changed to string
+    if (!presupuestoId) return; // Added check
     try {
-      await deleteMaterialFromPresupuesto(presupuesto_material_id);
+      await deleteMaterialFromPresupuesto(presupuestoId, presupuesto_material_id); // Pass string IDs
       loadData();
       setSnackbar({ open: true, message: 'Material eliminado.' });
     } catch (error) {
@@ -138,17 +142,17 @@ const DetallePresupuestoScreen = () => {
       <List>
         {materialesDelPresupuesto.map((item) => (
           <ListItem
-            key={item.presupuesto_material_id}
+            key={item.id} // Use item.id (presupuesto_material document ID)
             secondaryAction={
               <>
                 <IconButton edge="end" onClick={() => handleEditDialogOpen(item)}><EditIcon /></IconButton>
-                <IconButton edge="end" onClick={() => handleDelete(item.presupuesto_material_id)}><DeleteIcon /></IconButton>
+                <IconButton edge="end" onClick={() => handleDelete(item.id)}><DeleteIcon /></IconButton> {/* Use item.id */}
               </>
             }
           >
             <ListItemText 
-              primary={item.nombre} 
-              secondary={`Cantidad: ${item.cantidad} - Subtotal: ${(item.precio * item.cantidad).toFixed(2)}`}
+              primary={item.nombreMaterial} // Use nombreMaterial
+              secondary={`Cantidad: ${item.cantidad} - Subtotal: ${((item.precioMaterial ?? 0) * item.cantidad).toFixed(2)}`} // Use precioMaterial
             />
           </ListItem>
         ))}
@@ -167,7 +171,7 @@ const DetallePresupuestoScreen = () => {
             <Select
               value={selectedMaterialId}
               label="Material"
-              onChange={(e) => setSelectedMaterialId(e.target.value as number)}
+              onChange={(e) => setSelectedMaterialId(e.target.value as string)} // Changed to string
             >
               {todosLosMateriales.map((m: Material) => (
                 <MenuItem key={m.id} value={m.id}>{m.nombre} (${m.precio.toFixed(2)})</MenuItem>

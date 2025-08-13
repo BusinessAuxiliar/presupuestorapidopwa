@@ -31,7 +31,7 @@ const MaterialesScreen = () => {
   const [precioError, setPrecioError] = useState(false);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string }>({ open: false, message: '' });
   const [openConfirmDialog, setOpenConfirmDialog] = useState(false);
-  const [materialToDelete, setMaterialToDelete] = useState<number | null>(null);
+  const [materialToDelete, setMaterialToDelete] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     try {
@@ -101,7 +101,7 @@ const MaterialesScreen = () => {
     }
   };
 
-  const handleDelete = (id: number) => {
+  const handleDelete = (id: string) => {
     setMaterialToDelete(id);
     setOpenConfirmDialog(true);
   };
@@ -147,7 +147,7 @@ const MaterialesScreen = () => {
                   <IconButton edge="end" aria-label="edit" onClick={() => handleOpen(m)}>
                     <EditIcon />
                   </IconButton>
-                  <IconButton edge="end" aria-label="delete" onClick={() => handleDelete(m.id!)}>
+                  <IconButton edge="end" aria-label="delete" onClick={() => handleDelete(m.id)}>
                     <DeleteIcon />
                   </IconButton>
                 </>
