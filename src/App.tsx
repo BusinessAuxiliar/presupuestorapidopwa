@@ -36,9 +36,6 @@ function App() {
           </Route>
         </Routes>
       </BrowserRouter>
-      <p style={{ position: 'fixed', bottom: 0, left: 0, zIndex: 9999, backgroundColor: 'rgba(255, 255, 0, 0.8)', padding: '5px', border: '1px solid black', fontSize: '12px' }}>
-        Project ID: {import.meta.env.VITE_PROJECT_ID || 'NO ESTÁ CONFIGURADO'}
-      </p>
     </ThemeProvider>
   );
 }
