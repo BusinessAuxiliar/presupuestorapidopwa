@@ -9,7 +9,6 @@ import {
   writeBatch,
   getDoc,
   onSnapshot,
-  Unsubscribe,
   getDocs,
 } from 'firebase/firestore';
 import { db } from './firebase'; // Import the initialized Firestore instance
@@ -43,7 +42,7 @@ const presupuestosCollection = collection(db, 'presupuestos');
 
 // --- Real-time Listener Functions ---
 
-export const onMaterialesChange = (callback: (materiales: Material[]) => void): Unsubscribe => {
+export const onMaterialesChange = (callback: (materiales: Material[]) => void) => {
   const q = query(materialesCollection, orderBy('nombre'));
   return onSnapshot(q, snapshot => {
     const materiales = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Material));
@@ -51,7 +50,7 @@ export const onMaterialesChange = (callback: (materiales: Material[]) => void): 
   });
 };
 
-export const onPresupuestosChange = (callback: (presupuestos: Presupuesto[]) => void): Unsubscribe => {
+export const onPresupuestosChange = (callback: (presupuestos: Presupuesto[]) => void) => {
   const q = query(presupuestosCollection, orderBy('fecha', 'desc'));
   return onSnapshot(q, snapshot => {
     const presupuestos = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Presupuesto));
@@ -59,7 +58,7 @@ export const onPresupuestosChange = (callback: (presupuestos: Presupuesto[]) => 
   });
 };
 
-export const onPresupuestoMaterialesChange = (presupuesto_id: string, callback: (materiales: Omit<PresupuestoMaterial, 'presupuesto_id'>[]) => void): Unsubscribe => {
+export const onPresupuestoMaterialesChange = (presupuesto_id: string, callback: (materiales: Omit<PresupuestoMaterial, 'presupuesto_id'>[]) => void) => {
     const presupuestoMaterialesCollection = collection(db, 'presupuestos', presupuesto_id, 'materiales');
     return onSnapshot(presupuestoMaterialesCollection, snapshot => {
         const materiales = snapshot.docs.map(doc => {
