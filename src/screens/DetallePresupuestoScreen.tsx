@@ -1,11 +1,11 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { 
-  getMaterialesForPresupuesto, 
+  onPresupuestoMaterialesChange, 
   addMaterialToPresupuesto, 
   deleteMaterialFromPresupuesto, 
   updateMaterialQuantityInPresupuesto,
-  getMateriales,
+  onMaterialesChange,
   type Material
 } from '../db';
 import {
@@ -44,40 +44,44 @@ interface MaterialEnPresupuestoDisplay {
 
 const DetallePresupuestoScreen = () => {
   const { id } = useParams<{ id: string }>();
-  const presupuestoId = id; // No parseInt needed, it's already a string
+  const presupuestoId = id;
 
   const [materialesDelPresupuesto, setMaterialesDelPresupuesto] = useState<MaterialEnPresupuestoDisplay[]>([]);
   const [todosLosMateriales, setTodosLosMateriales] = useState<Material[]>([]);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [selectedMaterialId, setSelectedMaterialId] = useState<string | ''>(null);
+  const [selectedMaterialId, setSelectedMaterialId] = useState<string | ''>('');
   const [cantidad, setCantidad] = useState('');
   const [materialToEdit, setMaterialToEdit] = useState<MaterialEnPresupuestoDisplay | null>(null);
   const [total, setTotal] = useState(0);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string }>({ open: false, message: '' });
 
-  const loadData = useCallback(async () => {
+  useEffect(() => {
     if (!presupuestoId) return;
-    try {
-      const data = await getMaterialesForPresupuesto(presupuestoId);
-      const allMaterials = await getMateriales();
+
+    const unsubscribe = onPresupuestoMaterialesChange(presupuestoId, (data) => {
       setMaterialesDelPresupuesto(data);
-      setTodosLosMateriales(allMaterials);
-      const newTotal = data.reduce((acc, item) => acc + ((item.precioMaterial ?? 0) * item.cantidad), 0); // Use precioMaterial
+      const newTotal = data.reduce((acc, item) => acc + ((item.precioMaterial ?? 0) * item.cantidad), 0);
       setTotal(newTotal);
-    } catch (error) {
-      console.error(error);
-      setSnackbar({ open: true, message: 'Error al cargar los datos del presupuesto.' });
-    }
+    });
+
+    return () => unsubscribe();
   }, [presupuestoId]);
 
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    const unsubscribe = onMaterialesChange((data) => {
+      setTodosLosMateriales(data);
+    });
+    return () => unsubscribe();
+  }, []);
 
   // Add Dialog
   const handleAddDialogOpen = () => setAddDialogOpen(true);
-  const handleAddDialogClose = () => setAddDialogOpen(false);
+  const handleAddDialogClose = () => {
+    setAddDialogOpen(false);
+    setSelectedMaterialId('');
+    setCantidad('');
+  }
 
   // Edit Dialog
   const handleEditDialogOpen = (item: MaterialEnPresupuestoDisplay) => {
@@ -88,10 +92,9 @@ const DetallePresupuestoScreen = () => {
   const handleEditDialogClose = () => setEditDialogOpen(false);
 
   const handleAddMaterial = async () => {
-    if (selectedMaterialId && cantidad && presupuestoId) { // Added presupuestoId check
+    if (selectedMaterialId && cantidad && presupuestoId) {
       try {
-        await addMaterialToPresupuesto(presupuestoId, selectedMaterialId, parseFloat(cantidad)); // Pass string IDs
-        loadData();
+        await addMaterialToPresupuesto(presupuestoId, selectedMaterialId, parseFloat(cantidad));
         handleAddDialogClose();
         setSnackbar({ open: true, message: 'Material añadido.' });
       } catch (error) {
@@ -102,10 +105,9 @@ const DetallePresupuestoScreen = () => {
   };
 
   const handleUpdateQuantity = async () => {
-    if (materialToEdit && cantidad && presupuestoId) { // Added presupuestoId check
+    if (materialToEdit && cantidad && presupuestoId) {
       try {
-        await updateMaterialQuantityInPresupuesto(presupuestoId, materialToEdit.id, parseFloat(cantidad)); // Pass string IDs
-        loadData();
+        await updateMaterialQuantityInPresupuesto(presupuestoId, materialToEdit.id, parseFloat(cantidad));
         handleEditDialogClose();
         setSnackbar({ open: true, message: 'Cantidad actualizada.' });
       } catch (error) {
@@ -115,11 +117,10 @@ const DetallePresupuestoScreen = () => {
     }
   };
 
-  const handleDelete = async (presupuesto_material_id: string) => { // Changed to string
-    if (!presupuestoId) return; // Added check
+  const handleDelete = async (presupuesto_material_id: string) => {
+    if (!presupuestoId) return;
     try {
-      await deleteMaterialFromPresupuesto(presupuestoId, presupuesto_material_id); // Pass string IDs
-      loadData();
+      await deleteMaterialFromPresupuesto(presupuestoId, presupuesto_material_id);
       setSnackbar({ open: true, message: 'Material eliminado.' });
     } catch (error) {
       console.error(error);

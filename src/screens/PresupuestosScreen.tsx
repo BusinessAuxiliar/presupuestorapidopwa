@@ -1,6 +1,6 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getPresupuestos, addPresupuesto, deletePresupuesto, type Presupuesto } from '../db';
+import { onPresupuestosChange, addPresupuesto, deletePresupuesto, type Presupuesto } from '../db';
 import {
   Container,
   List,
@@ -31,19 +31,12 @@ const PresupuestosScreen = () => {
   const [presupuestoToDelete, setPresupuestoToDelete] = useState<string | null>(null);
   const navigate = useNavigate();
 
-  const loadData = useCallback(async () => {
-    try {
-      const data = await getPresupuestos();
-      setPresupuestos(data);
-    } catch (error) {
-      console.error(error);
-      setSnackbar({ open: true, message: 'Error al cargar presupuestos.' });
-    }
-  }, []);
-
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    const unsubscribe = onPresupuestosChange((data) => {
+      setPresupuestos(data);
+    });
+    return () => unsubscribe();
+  }, []);
 
   const handleClickOpen = () => {
     setNombre('');
@@ -60,7 +53,6 @@ const PresupuestosScreen = () => {
     try {
       await addPresupuesto(nombre);
       setNombre('');
-      loadData();
       handleClose();
       setSnackbar({ open: true, message: 'Presupuesto añadido.' });
     } catch (error) {
@@ -78,7 +70,6 @@ const PresupuestosScreen = () => {
     if (presupuestoToDelete !== null) {
       try {
         await deletePresupuesto(presupuestoToDelete);
-        loadData();
         setSnackbar({ open: true, message: 'Presupuesto eliminado.' });
       } catch (error) {
         console.error(error);

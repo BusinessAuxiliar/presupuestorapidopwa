@@ -1,5 +1,5 @@
-import { useState, useCallback, useEffect } from 'react';
-import { getMateriales, addMaterial, updateMaterial, deleteMaterial, type Material } from '../db';
+import { useState, useEffect } from 'react';
+import { onMaterialesChange, addMaterial, updateMaterial, deleteMaterial, type Material } from '../db';
 import {
   Container,
   List,
@@ -33,19 +33,12 @@ const MaterialesScreen = () => {
   const [openConfirmDialog, setOpenConfirmDialog] = useState(false);
   const [materialToDelete, setMaterialToDelete] = useState<string | null>(null);
 
-  const loadData = useCallback(async () => {
-    try {
-      const data = await getMateriales();
-      setMateriales(data);
-    } catch (error) {
-      console.error(error);
-      setSnackbar({ open: true, message: 'Error al cargar materiales.' });
-    }
-  }, []);
-
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    const unsubscribe = onMaterialesChange((data) => {
+      setMateriales(data);
+    });
+    return () => unsubscribe();
+  }, []);
 
   const handleOpen = (material: Material | null = null) => {
     if (material) {
@@ -93,7 +86,6 @@ const MaterialesScreen = () => {
         await addMaterial(nombre, parsedPrecio);
         setSnackbar({ open: true, message: 'Material añadido.' });
       }
-      loadData();
       handleClose();
     } catch (error) {
       console.error(error);
@@ -110,7 +102,6 @@ const MaterialesScreen = () => {
     if (materialToDelete !== null) {
       try {
         await deleteMaterial(materialToDelete);
-        loadData();
         setSnackbar({ open: true, message: 'Material eliminado.' });
       } catch (error) {
         console.error(error);
