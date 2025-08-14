@@ -24,6 +24,7 @@ export interface Presupuesto {
   id: string; // Firestore uses strings for IDs
   nombre: string;
   fecha: string;
+  manoDeObra: number; // Added labor cost field
 }
 
 export interface PresupuestoMaterial {
@@ -58,6 +59,18 @@ export const onPresupuestosChange = (callback: (presupuestos: Presupuesto[]) => 
   });
 };
 
+// New listener for a single budget document
+export const onPresupuestoChange = (presupuestoId: string, callback: (presupuesto: Presupuesto | null) => void) => {
+  const presupuestoDoc = doc(db, 'presupuestos', presupuestoId);
+  return onSnapshot(presupuestoDoc, (doc) => {
+    if (doc.exists()) {
+      callback({ ...doc.data(), id: doc.id } as Presupuesto);
+    } else {
+      callback(null);
+    }
+  });
+};
+
 export const onPresupuestoMaterialesChange = (presupuesto_id: string, callback: (materiales: Omit<PresupuestoMaterial, 'presupuesto_id'>[]) => void) => {
     const presupuestoMaterialesCollection = collection(db, 'presupuestos', presupuesto_id, 'materiales');
     return onSnapshot(presupuestoMaterialesCollection, snapshot => {
@@ -76,7 +89,7 @@ export const onPresupuestoMaterialesChange = (presupuesto_id: string, callback: 
 };
 
 
-// --- Write/Update/Delete Functions (remain mostly the same) ---
+// --- Write/Update/Delete Functions ---
 
 export const addMaterial = async (nombre: string, precio: number) => {
   return addDoc(materialesCollection, { nombre, precio });
@@ -94,8 +107,15 @@ export const deleteMaterial = async (id: string) => {
 
 export const addPresupuesto = async (nombre: string): Promise<string> => {
   const fecha = new Date().toISOString();
-  const newPresupuesto = await addDoc(presupuestosCollection, { nombre, fecha });
+  // Initialize manoDeObra to 0
+  const newPresupuesto = await addDoc(presupuestosCollection, { nombre, fecha, manoDeObra: 0 });
   return newPresupuesto.id;
+};
+
+// New function to update labor cost
+export const updateManoDeObra = async (presupuestoId: string, costo: number) => {
+  const presupuestoDoc = doc(db, 'presupuestos', presupuestoId);
+  return updateDoc(presupuestoDoc, { manoDeObra: costo });
 };
 
 export const deletePresupuesto = async (presupuesto_id: string) => {
