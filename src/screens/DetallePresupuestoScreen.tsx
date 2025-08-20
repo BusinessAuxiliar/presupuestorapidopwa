@@ -76,7 +76,7 @@ const DetallePresupuestoScreen = () => {
     if (!presupuestoId) return;
     const unsubscribe = onPresupuestoChange(presupuestoId, (data) => {
       setPresupuesto(data);
-      setManoDeObraInput(data?.manoDeObra.toString() || '0');
+      setManoDeObraInput((data?.manoDeObra ?? 0).toString());
     });
     return () => unsubscribe();
   }, [presupuestoId]);
@@ -228,7 +228,7 @@ const DetallePresupuestoScreen = () => {
       <Card sx={{ mb: 2 }}>
         <CardContent>
           <Typography variant="h6">Total Materiales: ${totalMateriales.toFixed(2)}</Typography>
-          <Typography variant="h6">Mano de Obra: ${presupuesto?.manoDeObra.toFixed(2) || '0.00'}</Typography>
+          <Typography variant="h6">Mano de Obra: ${(presupuesto?.manoDeObra ?? 0).toFixed(2)}</Typography>
           <Typography variant="h5" sx={{ mt: 1, fontWeight: 'bold' }}>Total General: ${totalGeneral.toFixed(2)}</Typography>
         </CardContent>
       </Card>
