@@ -123,8 +123,26 @@ const DetallePresupuestoScreen = () => {
 
   const handleAddMaterial = async () => {
     if (selectedMaterialId && cantidad && presupuestoId) {
+      const materialToAdd = todosLosMateriales.find(m => m.id === selectedMaterialId);
+      const parsedCantidad = parseFloat(cantidad);
+
+      if (!materialToAdd) {
+        setSnackbar({ open: true, message: 'Material no encontrado.' });
+        return;
+      }
+
+      if (isNaN(parsedCantidad) || parsedCantidad <= 0) {
+        setSnackbar({ open: true, message: 'La cantidad debe ser un número válido mayor que cero.' });
+        return;
+      }
+
+      if (materialToAdd.stock < parsedCantidad) {
+        setSnackbar({ open: true, message: `No hay suficiente stock para ${materialToAdd.nombre}. Disponible: ${materialToAdd.stock}` });
+        return;
+      }
+
       try {
-        await addMaterialToPresupuesto(presupuestoId, selectedMaterialId, parseFloat(cantidad));
+        await addMaterialToPresupuesto(presupuestoId, selectedMaterialId, parsedCantidad);
         setAddDialogOpen(false);
         setSelectedMaterialId('');
         setCantidad('');
@@ -138,8 +156,29 @@ const DetallePresupuestoScreen = () => {
 
   const handleUpdateQuantity = async () => {
     if (materialToEdit && cantidad && presupuestoId) {
+      const parsedNewCantidad = parseFloat(cantidad);
+
+      if (isNaN(parsedNewCantidad) || parsedNewCantidad <= 0) {
+        setSnackbar({ open: true, message: 'La nueva cantidad debe ser un número válido mayor que cero.' });
+        return;
+      }
+
+      const originalMaterial = todosLosMateriales.find(m => m.id === materialToEdit.material_id);
+      if (!originalMaterial) {
+        setSnackbar({ open: true, message: 'Material original no encontrado.' });
+        return;
+      }
+
+      const oldCantidad = materialToEdit.cantidad;
+      const stockDifference = parsedNewCantidad - oldCantidad;
+
+      if (stockDifference > 0 && originalMaterial.stock < stockDifference) {
+        setSnackbar({ open: true, message: `No hay suficiente stock para ${originalMaterial.nombre}. Disponible: ${originalMaterial.stock}` });
+        return;
+      }
+
       try {
-        await updateMaterialQuantityInPresupuesto(presupuestoId, materialToEdit.id, parseFloat(cantidad));
+        await updateMaterialQuantityInPresupuesto(presupuestoId, materialToEdit.id, parsedNewCantidad);
         setEditDialogOpen(false);
         setSnackbar({ open: true, message: 'Cantidad actualizada.' });
       } catch (error) {
