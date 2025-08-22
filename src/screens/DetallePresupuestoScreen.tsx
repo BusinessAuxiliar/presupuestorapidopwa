@@ -131,7 +131,7 @@ const DetallePresupuestoScreen = () => {
         setSnackbar({ open: true, message: 'Material añadido.' });
       } catch (error) {
         console.error(error);
-        setSnackbar({ open: true, message: 'Error al añadir material.' });
+        setSnackbar({ open: true, message: `Error al añadir material: ${error.message || error}` });
       }
     }
   };
@@ -144,7 +144,7 @@ const DetallePresupuestoScreen = () => {
         setSnackbar({ open: true, message: 'Cantidad actualizada.' });
       } catch (error) {
         console.error(error);
-        setSnackbar({ open: true, message: 'Error al actualizar cantidad.' });
+        setSnackbar({ open: true, message: `Error al actualizar cantidad: ${error.message || error}` });
       }
     }
   };

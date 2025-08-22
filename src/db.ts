@@ -19,6 +19,7 @@ export interface Material {
   nombre: string;
   precio: number;
   cantidad: number;
+  stock: number;
 }
 
 export interface Presupuesto {
@@ -92,13 +93,13 @@ export const onPresupuestoMaterialesChange = (presupuesto_id: string, callback: 
 
 // --- Write/Update/Delete Functions ---
 
-export const addMaterial = async (nombre: string, precio: number, cantidad: number) => {
-  return addDoc(materialesCollection, { nombre, precio, cantidad });
+export const addMaterial = async (nombre: string, precio: number, cantidad: number, stock: number) => {
+  return addDoc(materialesCollection, { nombre, precio, cantidad, stock });
 };
 
-export const updateMaterial = async (id: string, nombre: string, precio: number, cantidad: number) => {
+export const updateMaterial = async (id: string, nombre: string, precio: number, cantidad: number, stock: number) => {
   const materialDoc = doc(db, 'materiales', id);
-  return updateDoc(materialDoc, { nombre, precio, cantidad });
+  return updateDoc(materialDoc, { nombre, precio, cantidad, stock });
 };
 
 export const deleteMaterial = async (id: string) => {
@@ -134,11 +135,20 @@ export const deletePresupuesto = async (presupuesto_id: string) => {
 };
 
 export const addMaterialToPresupuesto = async (presupuesto_id: string, material_id: string, cantidad: number) => {
-  const materialDoc = await getDoc(doc(db, 'materiales', material_id));
+  const materialRef = doc(db, 'materiales', material_id);
+  const materialDoc = await getDoc(materialRef);
+
   if (!materialDoc.exists()) {
     throw new Error("Material not found");
   }
-  const materialData = materialDoc.data();
+  const materialData = materialDoc.data() as Material; // Cast to Material interface
+
+  if (materialData.stock < cantidad) {
+    throw new Error(`Not enough stock for ${materialData.nombre}. Available: ${materialData.stock}`);
+  }
+
+  // Update material stock
+  await updateDoc(materialRef, { stock: materialData.stock - cantidad });
 
   const presupuestoMaterialesCollection = collection(db, 'presupuestos', presupuesto_id, 'materiales');
   return addDoc(presupuestoMaterialesCollection, {
@@ -150,11 +160,51 @@ export const addMaterialToPresupuesto = async (presupuesto_id: string, material_
 };
 
 export const deleteMaterialFromPresupuesto = async (presupuesto_id: string, presupuesto_material_id: string) => {
-  const materialDoc = doc(db, 'presupuestos', presupuesto_id, 'materiales', presupuesto_material_id);
-  return deleteDoc(materialDoc);
+  const presupuestoMaterialRef = doc(db, 'presupuestos', presupuesto_id, 'materiales', presupuesto_material_id);
+  const presupuestoMaterialDoc = await getDoc(presupuestoMaterialRef);
+
+  if (presupuestoMaterialDoc.exists()) {
+    const data = presupuestoMaterialDoc.data();
+    const materialId = data.material_id;
+    const cantidad = data.cantidad;
+
+    const materialRef = doc(db, 'materiales', materialId);
+    const materialDoc = await getDoc(materialRef);
+
+    if (materialDoc.exists()) {
+      const materialData = materialDoc.data() as Material;
+      await updateDoc(materialRef, { stock: materialData.stock + cantidad });
+    }
+  }
+
+  return deleteDoc(presupuestoMaterialRef);
 };
 
-export const updateMaterialQuantityInPresupuesto = async (presupuesto_id: string, presupuesto_material_id: string, cantidad: number) => {
-  const materialDoc = doc(db, 'presupuestos', presupuesto_id, 'materiales', presupuesto_material_id);
-  return updateDoc(materialDoc, { cantidad });
+export const updateMaterialQuantityInPresupuesto = async (presupuesto_id: string, presupuesto_material_id: string, newCantidad: number) => {
+  const presupuestoMaterialRef = doc(db, 'presupuestos', presupuesto_id, 'materiales', presupuesto_material_id);
+  const presupuestoMaterialDoc = await getDoc(presupuestoMaterialRef);
+
+  if (!presupuestoMaterialDoc.exists()) {
+    throw new Error("Material in budget not found");
+  }
+
+  const oldCantidad = presupuestoMaterialDoc.data()?.cantidad || 0;
+  const materialId = presupuestoMaterialDoc.data()?.material_id;
+
+  const materialRef = doc(db, 'materiales', materialId);
+  const materialDoc = await getDoc(materialRef);
+
+  if (!materialDoc.exists()) {
+    throw new Error("Original material not found");
+  }
+
+  const materialData = materialDoc.data() as Material;
+  const stockDifference = newCantidad - oldCantidad;
+
+  if (stockDifference > 0 && materialData.stock < stockDifference) {
+    throw new Error(`Not enough stock for ${materialData.nombre}. Available: ${materialData.stock}`);
+  }
+
+  await updateDoc(materialRef, { stock: materialData.stock - stockDifference });
+  return updateDoc(presupuestoMaterialRef, { cantidad: newCantidad });
 };
