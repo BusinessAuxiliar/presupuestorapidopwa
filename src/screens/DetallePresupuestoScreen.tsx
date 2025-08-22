@@ -166,44 +166,49 @@ const DetallePresupuestoScreen = () => {
       return;
     }
 
-    const doc = new jsPDF();
+    try {
+      const doc = new jsPDF();
 
-    // Title
-    doc.setFontSize(18);
-    doc.text(`Presupuesto: ${presupuesto.nombre}`, 14, 22);
+      // Title
+      doc.setFontSize(18);
+      doc.text(`Presupuesto: ${presupuesto.nombre}`, 14, 22);
 
-    // Materials Table
-    doc.setFontSize(12);
-    const tableColumn = ["Material", "Cantidad", "Precio Unitario", "Subtotal"];
-    const tableRows: any[] = [];
+      // Materials Table
+      doc.setFontSize(12);
+      const tableColumn = ["Material", "Cantidad", "Precio Unitario", "Subtotal"];
+      const tableRows: any[] = [];
 
-    materialesDelPresupuesto.forEach(item => {
-      const materialData = [
-        item.nombreMaterial,
-        item.cantidad,
-        `$${(item.precioMaterial ?? 0).toFixed(2)}`,
-        `$${((item.precioMaterial ?? 0) * item.cantidad).toFixed(2)}`,
-      ];
-      tableRows.push(materialData);
-    });
+      materialesDelPresupuesto.forEach(item => {
+        const materialData = [
+          item.nombreMaterial,
+          item.cantidad,
+          `${(item.precioMaterial ?? 0).toFixed(2)}`,
+          `${((item.precioMaterial ?? 0) * item.cantidad).toFixed(2)}`,
+        ];
+        tableRows.push(materialData);
+      });
 
-    (doc as any).autoTable(tableColumn, tableRows, {
-      startY: 30,
-      headStyles: { fillColor: [0, 96, 100] }, // Primary color from theme
-      styles: { fontSize: 10, cellPadding: 3 },
-      margin: { top: 25, left: 14, right: 14 },
-    });
+      (doc as any).autoTable(tableColumn, tableRows, {
+        startY: 30,
+        headStyles: { fillColor: [0, 96, 100] }, // Primary color from theme
+        styles: { fontSize: 10, cellPadding: 3 },
+        margin: { top: 25, left: 14, right: 14 },
+      });
 
-    // Totals
-    let finalY = (doc as any).autoTable.previous.finalY;
-    doc.setFontSize(12);
-    doc.text(`Total Materiales: $${totalMateriales.toFixed(2)}`, 14, finalY + 10);
-    doc.text(`Mano de Obra: $${presupuesto.manoDeObra.toFixed(2)}`, 14, finalY + 18);
-    doc.setFontSize(14);
-    doc.text(`Total General: $${totalGeneral.toFixed(2)}`, 14, finalY + 28);
+      // Totals
+      let finalY = (doc as any).autoTable.previous.finalY;
+      doc.setFontSize(12);
+      doc.text(`Total Materiales: ${totalMateriales.toFixed(2)}`, 14, finalY + 10);
+      doc.text(`Mano de Obra: ${presupuesto.manoDeObra.toFixed(2)}`, 14, finalY + 18);
+      doc.setFontSize(14);
+      doc.text(`Total General: ${totalGeneral.toFixed(2)}`, 14, finalY + 28);
 
-    // Save the PDF
-    doc.save(`presupuesto-${presupuesto.nombre.replace(/\s/g, '_')}.pdf`);
+      // Save the PDF
+      doc.save(`presupuesto-${presupuesto.nombre.replace(/\s/g, '_')}.pdf`);
+    } catch (error: any) {
+      console.error("Error generating PDF:", error);
+      setSnackbar({ open: true, message: `Error al generar PDF: ${error.message || error}` });
+    }
   };
 
   return (
