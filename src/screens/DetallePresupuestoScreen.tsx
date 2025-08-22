@@ -40,7 +40,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf'; // Import PDF icon
 
 import { jsPDF } from 'jspdf';
-import 'jspdf-autotable'; // This imports the autoTable plugin
+import autoTable from 'jspdf-autotable'; // Explicitly import autoTable
 
 interface MaterialEnPresupuestoDisplay {
   id: string;
@@ -188,7 +188,9 @@ const DetallePresupuestoScreen = () => {
         tableRows.push(materialData);
       });
 
-      (doc as any).autoTable(tableColumn, tableRows, {
+      autoTable(doc, {
+        head: [tableColumn], // autoTable expects head as an array of arrays
+        body: tableRows,
         startY: 30,
         headStyles: { fillColor: [0, 96, 100] }, // Primary color from theme
         styles: { fontSize: 10, cellPadding: 3 },
