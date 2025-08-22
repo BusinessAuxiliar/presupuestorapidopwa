@@ -188,7 +188,7 @@ const DetallePresupuestoScreen = () => {
         tableRows.push(materialData);
       });
 
-      (doc as any).      (doc as any).      (doc as any).      const tableResult = autoTable(doc, {
+      (doc as any).      (doc as any).      (doc as any).      const tableResult =                   const tableResult = autoTable(doc, {
         head: [tableColumn], // autoTable expects head as an array of arrays
         body: tableRows,
         startY: 30,
