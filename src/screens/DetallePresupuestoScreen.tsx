@@ -188,7 +188,7 @@ const DetallePresupuestoScreen = () => {
         tableRows.push(materialData);
       });
 
-      autoTable(doc, {
+      (doc as any).      (doc as any).      (doc as any).      const tableResult = autoTable(doc, {
         head: [tableColumn], // autoTable expects head as an array of arrays
         body: tableRows,
         startY: 30,
@@ -197,8 +197,12 @@ const DetallePresupuestoScreen = () => {
         margin: { top: 25, left: 14, right: 14 },
       });
 
+      console.log("doc.autoTable after call:", (doc as any).autoTable); // NEW DEBUG LOG
+      console.log("doc.autoTable.previous after call:", (doc as any).autoTable.previous); // NEW DEBUG LOG
+
       // Totals
-      let finalY = (doc as any).autoTable.previous.finalY;
+      // Totals
+      let finalY = doc.autoTable.previous.finalY;
       doc.setFontSize(12);
       doc.text(`Total Materiales: ${totalMateriales.toFixed(2)}`, 14, finalY + 10);
       doc.text(`Mano de Obra: ${presupuesto.manoDeObra.toFixed(2)}`, 14, finalY + 18);
