@@ -18,6 +18,7 @@ export interface Material {
   id: string; // Firestore uses strings for IDs
   nombre: string;
   precio: number;
+  cantidad: number;
 }
 
 export interface Presupuesto {
@@ -91,13 +92,13 @@ export const onPresupuestoMaterialesChange = (presupuesto_id: string, callback: 
 
 // --- Write/Update/Delete Functions ---
 
-export const addMaterial = async (nombre: string, precio: number) => {
-  return addDoc(materialesCollection, { nombre, precio });
+export const addMaterial = async (nombre: string, precio: number, cantidad: number) => {
+  return addDoc(materialesCollection, { nombre, precio, cantidad });
 };
 
-export const updateMaterial = async (id: string, nombre: string, precio: number) => {
+export const updateMaterial = async (id: string, nombre: string, precio: number, cantidad: number) => {
   const materialDoc = doc(db, 'materiales', id);
-  return updateDoc(materialDoc, { nombre, precio });
+  return updateDoc(materialDoc, { nombre, precio, cantidad });
 };
 
 export const deleteMaterial = async (id: string) => {

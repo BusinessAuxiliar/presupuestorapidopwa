@@ -208,6 +208,10 @@ const DetallePresupuestoScreen = () => {
       doc.setFontSize(14);
       doc.text(`Total General: ${totalGeneral.toFixed(2)}`, 14, finalY + 28);
 
+      // Add IVA note
+      doc.setFontSize(10); // Smaller font size for the note
+      doc.text("Los precios detallados en este presupuesto contienen IVA", 14, finalY + 40); // Adjust Y position as needed
+
       // Save the PDF
       doc.save(`presupuesto-${presupuesto.nombre.replace(/\s/g, '_')}.pdf`);
     } catch (error: any) {

@@ -27,6 +27,7 @@ const MaterialesScreen = () => {
   const [currentMaterial, setCurrentMaterial] = useState<Material | null>(null);
   const [nombre, setNombre] = useState('');
   const [precio, setPrecio] = useState('');
+  const [cantidad, setCantidad] = useState('');
   const [nombreError, setNombreError] = useState(false);
   const [precioError, setPrecioError] = useState(false);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string }>({ open: false, message: '' });
@@ -46,6 +47,7 @@ const MaterialesScreen = () => {
       setCurrentMaterial(material);
       setNombre(material.nombre);
       setPrecio(material.precio.toString());
+      setCantidad(material.cantidad.toString());
     } else {
       setIsEditing(false);
       setCurrentMaterial(null);
@@ -69,6 +71,8 @@ const MaterialesScreen = () => {
     }
 
     const parsedPrecio = parseFloat(precio);
+    const parsedCantidad = parseFloat(cantidad);
+
     if (isNaN(parsedPrecio) || parsedPrecio <= 0) {
       setPrecioError(true);
       hasError = true;
@@ -76,14 +80,19 @@ const MaterialesScreen = () => {
       setPrecioError(false);
     }
 
+    if (isNaN(parsedCantidad) || parsedCantidad < 0) {
+      setSnackbar({ open: true, message: 'La cantidad debe ser un número válido mayor o igual a cero.' });
+      hasError = true;
+    }
+
     if (hasError) return;
 
     try {
       if (isEditing && currentMaterial?.id) {
-        await updateMaterial(currentMaterial.id, nombre, parsedPrecio);
+        await updateMaterial(currentMaterial.id, nombre, parsedPrecio, parsedCantidad);
         setSnackbar({ open: true, message: 'Material actualizado.' });
       } else {
-        await addMaterial(nombre, parsedPrecio);
+        await addMaterial(nombre, parsedPrecio, parsedCantidad);
         setSnackbar({ open: true, message: 'Material añadido.' });
       }
       handleClose();
@@ -146,7 +155,7 @@ const MaterialesScreen = () => {
             >
               <ListItemText
                 primary={m.nombre}
-                secondary={`${m.precio.toFixed(2)}`}
+                secondary={`Precio: ${m.precio.toFixed(2)} - Cantidad: ${m.cantidad}`}
               />
             </ListItem>
           ))}
@@ -193,6 +202,15 @@ const MaterialesScreen = () => {
             }}
             error={precioError}
             helperText={precioError ? 'El precio debe ser un número válido mayor que cero.' : ''}
+          />
+          <TextField
+            margin="dense"
+            label="Cantidad"
+            type="number"
+            fullWidth
+            variant="standard"
+            value={cantidad}
+            onChange={(e) => setCantidad(e.target.value)}
           />
         </DialogContent>
         <DialogActions>
