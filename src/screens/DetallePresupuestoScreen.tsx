@@ -147,7 +147,7 @@ const DetallePresupuestoScreen = () => {
         setSelectedMaterialId('');
         setCantidad('');
         setSnackbar({ open: true, message: 'Material añadido.' });
-      } catch (error) {
+      } catch (error: any) {
         console.error(error);
         setSnackbar({ open: true, message: `Error al añadir material: ${error.message || error}` });
       }
@@ -181,7 +181,7 @@ const DetallePresupuestoScreen = () => {
         await updateMaterialQuantityInPresupuesto(presupuestoId, materialToEdit.id, parsedNewCantidad);
         setEditDialogOpen(false);
         setSnackbar({ open: true, message: 'Cantidad actualizada.' });
-      } catch (error) {
+      } catch (error: any) {
         console.error(error);
         setSnackbar({ open: true, message: `Error al actualizar cantidad: ${error.message || error}` });
       }
@@ -193,7 +193,7 @@ const DetallePresupuestoScreen = () => {
     try {
       await deleteMaterialFromPresupuesto(presupuestoId, presupuesto_material_id);
       setSnackbar({ open: true, message: 'Material eliminado.' });
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
       setSnackbar({ open: true, message: 'Error al eliminar material.' });
     }
